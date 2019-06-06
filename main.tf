@@ -41,6 +41,15 @@ resource "aws_acm_certificate" "cert" {
   }
 }
 
+resource "aws_route53_record" "cert_validation" {
+  count   = length(aws_acm_certificate.cert.domain_validation_options)
+  name    = aws_acm_certificate.cert.domain_validation_options[count.index].resource_record_name
+  type    = aws_acm_certificate.cert.domain_validation_options[count.index].resource_record_type
+  zone_id = aws_route53_zone.this.zone_id
+  records = aws_acm_certificate.cert.domain_validation_options.*.resource_record_value
+  ttl     = 60
+}
+
 resource "aws_acm_certificate" "cert-east" {
   # if region is us-east-1, set count to 0, otherwise set count to 1
   # This allows us to only create the extra cert if we aren't already using us-east-1
@@ -70,3 +79,11 @@ resource "aws_acm_certificate" "cert-east" {
   }
 }
 
+resource "aws_route53_record" "cert_validation_east" {
+  count   = length(aws_acm_certificate.cert-east.domain_validation_options)
+  name    = aws_acm_certificate.cert-east.domain_validation_options[count.index].resource_record_name
+  type    = aws_acm_certificate.cert-east.domain_validation_options[count.index].resource_record_type
+  zone_id = aws_route53_zone.this.zone_id
+  records = aws_acm_certificate.cert-east.domain_validation_options.*.resource_record_value
+  ttl     = 60
+}
