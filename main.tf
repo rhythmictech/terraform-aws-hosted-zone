@@ -83,7 +83,7 @@ resource "aws_route53_record" "cert_validation_east" {
   count = replace(
     replace(data.aws_region.current.name, "us-east-1", "0"),
     "/^[a-z].*[0-9]$/",
-    length(aws_acm_certificate.cert-east[0].domain_validation_options),
+    2,
   )
   name    = aws_acm_certificate.cert-east[0].domain_validation_options[count.index].resource_record_name
   type    = aws_acm_certificate.cert-east[0].domain_validation_options[count.index].resource_record_type
