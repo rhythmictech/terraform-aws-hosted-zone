@@ -20,6 +20,7 @@ resource "aws_route53_zone" "this" {
 }
 
 resource "aws_acm_certificate" "cert" {
+  depends_on = [aws_route53_zone.this]
   domain_name = "*.${var.external_domain}"
   validation_method = "DNS"
 
@@ -31,7 +32,7 @@ resource "aws_acm_certificate" "cert" {
     local.tags,
     var.tags,
     {
-      Name = "var.name-cert"
+      Name = "${var.name}-cert"
     }
   )
 
@@ -50,6 +51,7 @@ resource "aws_acm_certificate" "cert-east" {
     "1",
   )
 
+  depends_on = [aws_route53_zone.this]
   provider    = aws.us-east-1
   domain_name = "*.${var.external_domain}"
   subject_alternative_names = [var.external_domain]
@@ -59,7 +61,7 @@ resource "aws_acm_certificate" "cert-east" {
     local.tags,
     var.tags,
     {
-      Name = "var.name-cert-east"
+      Name = "${var.name}-cert-east"
     }
   )
 
