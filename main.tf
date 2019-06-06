@@ -80,10 +80,14 @@ resource "aws_acm_certificate" "cert-east" {
 }
 
 resource "aws_route53_record" "cert_validation_east" {
-  count   = length(aws_acm_certificate.cert-east.domain_validation_options)
-  name    = aws_acm_certificate.cert-east.domain_validation_options[count.index].resource_record_name
-  type    = aws_acm_certificate.cert-east.domain_validation_options[count.index].resource_record_type
+  count = replace(
+    replace(data.aws_region.current.name, "us-east-1", "0"),
+    "/^[a-z].*[0-9]$/",
+    length(aws_acm_certificate.cert-east[0].domain_validation_options),
+  )
+  name    = aws_acm_certificate.cert-east[0].domain_validation_options[count.index].resource_record_name
+  type    = aws_acm_certificate.cert-east[0].domain_validation_options[count.index].resource_record_type
   zone_id = aws_route53_zone.this.zone_id
-  records = aws_acm_certificate.cert-east.domain_validation_options.*.resource_record_value
+  records = aws_acm_certificate.cert-east[0].domain_validation_options.*.resource_record_value
   ttl     = 60
 }
