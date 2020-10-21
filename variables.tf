@@ -1,24 +1,22 @@
-data "aws_region" "current" {}
-
-locals {
-  tags = {
-    tf_module = "aws-hosted-zone"
-  }
+variable "create_certificate" {
+  default     = true
+  description = "Create an ACM certificate associated with the domain"
+  type        = bool
 }
 
 variable "name" {
-  description = "Name of module"
-  type = "string"
-  default = "aws-hosted-zone"
+  default     = null
+  description = "Name tag to apply (will default to `external_domain` if not specified)"
+  type        = string
 }
 
-variable "external_domain" {
-  description = "External Domain to use in hosted zone"
+variable "domain" {
+  description = "Domain for hosted zone"
   type        = string
 }
 
 variable "tags" {
-  description = "map of custom tags to add to resources"
-  type        = map(string)
   default     = {}
+  description = "Custom tags to add to resources"
+  type        = map(string)
 }
