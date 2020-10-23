@@ -1,79 +1,56 @@
-provider "aws" {
-  alias  = "us-east-1"
-  region = "us-east-1"
+locals {
+  name = coalesce(var.name, var.domain)
+
+  tags = merge(var.tags,
+    {
+      Name = local.name
+    }
+  )
 }
 
 resource "aws_route53_zone" "this" {
-  name = var.external_domain
+  name = var.domain
+  tags = local.tags
 
-  tags = merge(
-    local.tags,
-    var.tags,
-    {
-      Name = "var.name"
-    }
-  )
 
   lifecycle {
     create_before_destroy = true
   }
 }
 
-resource "aws_acm_certificate" "cert" {
-  depends_on = [aws_route53_zone.this]
-  domain_name = "*.${var.external_domain}"
-  validation_method = "DNS"
+resource "aws_acm_certificate" "this" {
+  count = var.create_certificate ? 1 : 0
 
-  subject_alternative_names = [
-    var.external_domain,
-  ]
-
-  tags = merge(
-    local.tags,
-    var.tags,
-    {
-      Name = "${var.name}-cert"
-    }
-  )
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_route53_record" "cert_validation" {
-  name    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_name
-  type    = aws_acm_certificate.cert.domain_validation_options[0].resource_record_type
-  zone_id = aws_route53_zone.this.zone_id
-  records = [aws_acm_certificate.cert.domain_validation_options[0].resource_record_value]
-  ttl     = 60
-}
-
-resource "aws_acm_certificate" "cert-east" {
-  # if region is us-east-1, set count to 0, otherwise set count to 1
-  # This allows us to only create the extra cert if we aren't already using us-east-1
-  # Terraform's regex parser was broken when I wrote this so I couldn't use \w or \d
-  count = replace(
-    replace(data.aws_region.current.name, "us-east-1", "0"),
-    "/^[a-z].*[0-9]$/",
-    "1",
-  )
+  domain_name               = "*.${var.domain}"
+  subject_alternative_names = [var.domain]
+  tags                      = local.tags
+  validation_method         = "DNS"
 
   depends_on = [aws_route53_zone.this]
-  provider    = aws.us-east-1
-  domain_name = "*.${var.external_domain}"
-  subject_alternative_names = [var.external_domain]
-  validation_method = "DNS"
-
-  tags = merge(
-    local.tags,
-    var.tags,
-    {
-      Name = "${var.name}-cert-east"
-    }
-  )
 
   lifecycle {
     create_before_destroy = true
   }
+}
+
+locals {
+  dvos = try(tolist(aws_acm_certificate.this[0].domain_validation_options), [{}])
+}
+
+resource "aws_route53_record" "this" {
+  count = var.create_certificate ? 1 : 0
+
+  allow_overwrite = true
+  name            = local.dvos[0].resource_record_name
+  records         = [local.dvos[0].resource_record_value]
+  ttl             = 60
+  type            = local.dvos[0].resource_record_type
+  zone_id         = aws_route53_zone.this.zone_id
+}
+
+resource "aws_acm_certificate_validation" "this" {
+  count = var.create_certificate ? 1 : 0
+
+  certificate_arn         = aws_acm_certificate.this[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.this : record.fqdn]
 }
