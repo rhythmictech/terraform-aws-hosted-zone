@@ -7,7 +7,7 @@ output "zone_name_servers" {
 
 output "certificate_arn" {
   description = "ACM SSL Certificate ARN"
-  value       = aws_acm_certificate.this[0].arn
+  value       = var.create_certificate ? aws_acm_certificate.this[0].arn : ""
 }
 
 output "zone_id" {
